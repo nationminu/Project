@@ -1,0 +1,121 @@
+1. JDBC 모듈 등록방법
+1) 모듈디렉토리 생성
+JBOSS_MODULEPATH에 모듈 확장 디렉토리 추가
+env.sh
+##### JBoss System module and User module directory #####
+export JBOSS_MODULEPATH=$JBOSS_HOME/modules:$JBOSS_HOME/modules.ext
+ 
+모듈디렉토리 생성
+hsyang@hsyang-pc: mkdir -p /usr/local/jboss-eap-6.0/modules.ext/com/mysql/main
+hsyang@hsyang-pc: cd /usr/local/jboss-eap-6.0/modules.ext/com/mysql/main
+ 
+2) Jar파일 복사
+모듈에서 사용할 jar 파일을 복사
+hsyang@hsyang-pc: pwd
+/usr/local/jboss-eap-6.0/modules.ext/com/mysql/main
+hsyang@hsyang-pc: cp /home/jboss/mysql-connector-java-5.1.17-bin.jar ./
+ 
+3) 모듈등록
+아래와 같이 등록되면 com.mysql 이란 이름으로 외부에서 참조될 수 있다.
+module.xml
+hsyang@hsyang-pc: pwd
+/usr/local/jboss-eap-6.0/modules.ext/com/mysql/main
+hsyang@hsyang-pc: vi module.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns="urn:jboss:module:1.1" name="com.mysql">
+    <resources>
+        <resource-root path="mysql-connector-java-5.1.17-bin.jar"/>
+    </resources>
+    <dependencies>
+        <module name="javax.api"/>
+    </dependencies>
+</module>
+ 
+2. Driver 추가
+Datasource에서 사용할 Driver를 추가한다.
+vi configuration/standalone.xml
+<driver name="mysql5" module="com.mysql">
+    <driver-class>com.mysql.jdbc.Driver</driver-class>
+</driver>
+ 
+CLI
+./jboss-cli.sh --controller=192.168.190.161 --connect
+[standalone@192.168.190.161:9999 /] /subsystem=datasources/jdbc-driver=mysql5:add(driver-name=mysql5, driver-module-name="com.mysql", driver-class-name=com.mysql.jdbc.Driver)
+ 
+#Driver 목록확인
+[standalone@192.168.190.161:9999 /] /subsystem=datasources:installed-drivers-list
+ 
+3. Datasource 등록
+1) admin-console을 이용한 등록방법
+http://hostip:9990
+화면메뉴: Profile - Connector - Datasource - Add
+ 
+2) 설정파일을 이용한 등록방법
+ 
+standalone.xml
+  <datasource jta="false" jndi-name="java:/jboss/mysqlds" pool-name="mysqlds" enabled="true" use-ccm="true">
+    <connection-url>jdbc:mysql://localhost:3306/mydb</connection-url>
+    <driver-class>com.mysql.jdbc.Driver</driver-class>
+    <driver>mysql5.5</driver>
+    <pool>
+        <min-pool-size>10</min-pool-size>
+        <max-pool-size>20</max-pool-size>
+        <prefill>false</prefill>
+    </pool>
+    <security>
+        <user-name>root</user-name>
+        <password>gmltjs</password>
+    </security>
+    <validation>
+        <validate-on-match>false</validate-on-match>
+        <background-validation>false</background-validation>
+    </validation>
+    <statement>
+        <share-prepared-statements>false</share-prepared-statements>
+    </statement>
+</datasource>
+
+
+3. Datasource  샘플
+<subsystem xmlns="urn:jboss:domain:datasources:1.2">
+    <datasources>
+        <datasource jndi-name="java:/mysql" pool-name="mysql5" enabled="true">
+            <connection-url>jdbc:mysql://184.73.6.4:3306/mysql</connection-url>
+            <connection-property name="connectTimeout">
+                10000
+            </connection-property>
+            <connection-property name="socketTimeout">
+                120000
+            </connection-property>
+            <driver>mysql5</driver>
+            <pool>
+                <min-pool-size>20</min-pool-size>
+                <max-pool-size>20</max-pool-size>
+                <prefill>false</prefill>
+            </pool>
+            <security>
+                <user-name>root</user-name>
+                <password>gmltjs</password>
+            </security>
+            <validation>
+                <valid-connection-checker class-name="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"/>
+                <background-validation>true</background-validation>
+                <background-validation-millis>5000</background-validation-millis>
+                <exception-sorter class-name="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"/>
+            </validation>
+            <timeout>
+                <idle-timeout-minutes>15</idle-timeout-minutes>
+                <query-timeout>60</query-timeout>
+            </timeout>
+            <statement>
+                <prepared-statement-cache-size>20</prepared-statement-cache-size>
+                <share-prepared-statements>true</share-prepared-statements>
+            </statement>
+        </datasource>
+        <drivers>
+            <driver name="mysql5" module="com.mysql">
+                <driver-class>com.mysql.jdbc.Driver</driver-class>
+            </driver>
+        </drivers>
+    </datasources>
+</subsystem>
